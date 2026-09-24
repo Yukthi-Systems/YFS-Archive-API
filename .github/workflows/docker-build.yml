@@ -52,26 +52,26 @@ jobs:
           repository: rjyspl/yfs-archive-api
           readme-filepath: ./DOCKERHUB.md
 
-  # deploy:
-  #   needs: build
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v4
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-  #     - name: Configure SSH
-  #       uses: webfactory/ssh-agent@v0.5.3
-  #       with:
-  #         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - name: Configure SSH
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-  #     - name: Deploy to Server
-  #       env:
-  #         SERVER_IP: ${{ secrets.SERVER_IP }}
-  #       run: |
-  #         # Connect and restart the service
-  #         ssh -o StrictHostKeyChecking=no root@$SERVER_IP << 'EOF'
-  #           cd /srv/yfs-archive-api
-  #           docker compose pull
-  #           docker compose up -d
-  #           docker ps
-  #         EOF
+      - name: Deploy to Server
+        env:
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+        run: |
+          # Connect and restart the service
+          ssh -o StrictHostKeyChecking=no root@$SERVER_IP << 'EOF'
+            cd /srv/yfs-archive-api
+            docker compose pull
+            docker compose up -d
+            docker ps
+          EOF
