@@ -66,8 +66,8 @@ or DDL privileges.
 - **Safe archive paths.** Every entry path is sanitised against `..`
   traversal, absolute paths, drive letters and NUL bytes.
 - **Empty folders preserved** as explicit directory entries.
-- **Graceful shutdown.** In-flight jobs are allowed to finish, and readiness
-  flips to `503` first.
+- **Graceful shutdown.** In-flight jobs are allowed to finish, and new
+  archive requests are rejected first.
 - **Structured JSON logging** (`log/slog`) with optional size- and age-based
   rotation.
 - **Small, static binary.** Pure Go (`CGO_ENABLED=0`) on Alpine, with only
@@ -104,7 +104,7 @@ and nothing outside `internal/config` reads environment variables.
 ```bash
 cp .env.example .env         # set DATABASE_URL and SELF_API_TOKEN at minimum
 docker compose up -d
-curl http://localhost:8080/healthz    # {"status":"ok"}
+docker compose ps    # STATUS shows (healthy) once the process is running
 ```
 
 Or with plain `docker run`:
@@ -223,8 +223,6 @@ A storage server must:
 | `POST` | `/internal/archives` | Queue an archive job. **Internal only — do not expose publicly.** |
 | `GET` | `/archives/{job_id}/events` | Follow job progress (SSE). |
 | `GET` | `/archives/{job_id}/download?token=…` | Download a finished archive. |
-| `GET` | `/healthz` | Liveness: `200 {"status":"ok"}` whenever the process is serving. |
-| `GET` | `/readyz` | Readiness: `200 {"status":"ready"}`, or `503` during startup and shutdown. |
 
 Every error response has the shape `{"error": "<safe message>"}`. Internal
 details are logged, never returned.
@@ -303,7 +301,7 @@ implementation under `internal/` (not importable by other modules).
 │   ├── archive/         # streaming ZIP/TAR writer + path sanitisation
 │   ├── client/          # HTTP client for storage servers
 │   ├── config/          # typed config loaded from env / .env
-│   ├── handler/         # HTTP handlers (archive, SSE, download, health)
+│   ├── handler/         # HTTP handlers (archive, SSE, download)
 │   ├── job/             # job Store interface + in-memory implementation
 │   ├── logger/          # slog JSON logger + lumberjack rotation
 │   ├── model/           # shared domain types

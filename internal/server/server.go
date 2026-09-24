@@ -42,7 +42,6 @@ func New(
 	cfg config.ServerConfig,
 	svc *service.ArchiveService,
 	archiveExpiry time.Duration,
-	readiness *handler.Readiness,
 	shutdown context.Context,
 	logger *slog.Logger,
 ) *http.Server {
@@ -51,13 +50,10 @@ func New(
 	archiveHandler := handler.NewArchiveHandler(svc, archiveExpiry, cfg.PublicBaseURL, logger)
 	sseHandler := handler.NewSSEHandler(svc, 500*time.Millisecond, archiveExpiry, cfg.PublicBaseURL, shutdown, logger)
 	downloadHandler := handler.NewDownloadHandler(svc, logger)
-	healthHandler := handler.NewHealthHandler(readiness, logger)
 
 	mux.Handle("POST /internal/archives", requireAPIToken(cfg.SelfAPIToken, logger)(http.HandlerFunc(archiveHandler.Create)))
 	mux.HandleFunc("GET /archives/{job_id}/events", sseHandler.Events)
 	mux.HandleFunc("GET /archives/{job_id}/download", downloadHandler.Download)
-	mux.HandleFunc("GET /healthz", healthHandler.Healthz)
-	mux.HandleFunc("GET /readyz", healthHandler.Readyz)
 
 	return &http.Server{
 		Addr:              cfg.Addr(),

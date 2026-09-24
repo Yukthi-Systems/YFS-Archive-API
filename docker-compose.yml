@@ -1,9 +1,6 @@
 services:
   archive-service:
     image: rjyspl/yfs-archive-api:latest
-    build:
-      context: .
-      dockerfile: Dockerfile
     container_name: yfs-archive-api
     restart: always
 
@@ -14,8 +11,8 @@ services:
       - "127.0.0.1:8080:8080"
 
     volumes:
-      - ./archives:/app/archives
-      - ./logs:/app/logs
+      - /data/archives:/app/archives
+      - /var/log/archive-api:/app/logs
 
     # Must exceed SERVER_SHUTDOWN_TIMEOUT so in-flight archive jobs can
     # finish before Docker sends SIGKILL.

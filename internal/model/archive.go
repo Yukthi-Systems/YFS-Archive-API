@@ -139,8 +139,10 @@ type Job struct {
 	DownloadToken string
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
-	CompletedAt   *time.Time
-	ExpiresAt     time.Time
+	// StartedAt is when a worker picked the job up; zero while queued.
+	StartedAt   time.Time
+	CompletedAt *time.Time
+	ExpiresAt   time.Time
 }
 
 // Clone returns a deep-enough copy of the job for safe handoff across

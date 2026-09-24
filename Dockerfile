@@ -30,7 +30,7 @@ LABEL org.opencontainers.image.title="YFS Archive API" \
 
 # ca-certificates: HTTPS calls to storage servers / TLS to PostgreSQL.
 # tzdata: correct local timestamps if TZ is set.
-# wget (busybox) is already present and is used by HEALTHCHECK.
+# pgrep (busybox) is already present and is used by HEALTHCHECK.
 RUN apk add --no-cache ca-certificates tzdata
 
 WORKDIR /app
@@ -50,7 +50,7 @@ EXPOSE 8080
 VOLUME ["/app/archives", "/app/logs"]
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-    CMD wget -q -O /dev/null "http://127.0.0.1:${SERVER_PORT}/healthz" || exit 1
+    CMD pgrep -x archive-service > /dev/null || exit 1
 
 # The app handles SIGTERM itself (graceful shutdown of in-flight jobs), so
 # run it as PID 1 directly.

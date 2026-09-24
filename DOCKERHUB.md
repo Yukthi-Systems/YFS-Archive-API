@@ -19,7 +19,7 @@ Server-Sent Events.
 - Live progress over **SSE**, and **token-protected**, auto-expiring downloads
 - Fixed worker pool, bounded queue and a hard archive size cap
 - **Graceful shutdown.** Running jobs finish before the container exits.
-- Built-in `HEALTHCHECK` on `/healthz`
+- Built-in `HEALTHCHECK` that checks the service process is running
 - **Read-only** against PostgreSQL. It never writes or migrates.
 
 ---
@@ -64,8 +64,7 @@ volumes:
 
 ```bash
 docker compose up -d
-curl http://localhost:8080/healthz   # {"status":"ok"}
-curl http://localhost:8080/readyz    # {"status":"ready"}
+docker compose ps    # STATUS shows (healthy) once the process is running
 ```
 
 ---
@@ -138,8 +137,6 @@ Logs are JSON on stdout by default, so `docker logs` works out of the box.
 | `POST /internal/archives`                  | Queue an archive job. **Internal only — do not expose publicly.** |
 | `GET  /archives/{job_id}/events`           | Live progress (Server-Sent Events) |
 | `GET  /archives/{job_id}/download?token=…` | Download the finished ZIP or TAR |
-| `GET  /healthz`                            | Liveness |
-| `GET  /readyz`                             | Readiness. Returns `503` during shutdown. |
 
 ```bash
 curl -X POST http://localhost:8080/internal/archives \
@@ -157,10 +154,9 @@ for request and response details.
 
 On `SIGTERM` the container:
 
-1. flips `/readyz` to `503`,
-2. rejects new archive requests,
-3. lets running jobs finish, for up to `SERVER_SHUTDOWN_TIMEOUT`,
-4. closes the HTTP server.
+1. rejects new archive requests,
+2. lets running jobs finish, for up to `SERVER_SHUTDOWN_TIMEOUT`,
+3. closes the HTTP server.
 
 Give Docker more time than that: `stop_grace_period: 45s` or
 `docker stop -t 45`.

@@ -31,7 +31,6 @@ import (
 	"github.com/Yukthi-Systems/YFS-Archive-API/internal/archive"
 	"github.com/Yukthi-Systems/YFS-Archive-API/internal/client"
 	"github.com/Yukthi-Systems/YFS-Archive-API/internal/config"
-	"github.com/Yukthi-Systems/YFS-Archive-API/internal/handler"
 	"github.com/Yukthi-Systems/YFS-Archive-API/internal/job"
 	"github.com/Yukthi-Systems/YFS-Archive-API/internal/logger"
 	"github.com/Yukthi-Systems/YFS-Archive-API/internal/repository"
@@ -126,8 +125,7 @@ func run() error {
 		cleanup.Run(shutdownCtx)
 	}()
 
-	readiness := handler.NewReadiness()
-	httpServer := server.New(cfg.Server, archiveService, cfg.Archive.Expiry, readiness, shutdownCtx, log)
+	httpServer := server.New(cfg.Server, archiveService, cfg.Archive.Expiry, shutdownCtx, log)
 
 	listener, err := net.Listen("tcp", cfg.Server.Addr())
 	if err != nil {
@@ -144,7 +142,6 @@ func run() error {
 	}()
 
 	log.Info("http server listening", "addr", cfg.Server.Addr())
-	readiness.Set(true)
 
 	select {
 	case <-rootCtx.Done():
@@ -156,11 +153,11 @@ func run() error {
 		return err
 	}
 
-	return shutdown(cfg, httpServer, archiveService, workerPool, readiness, cancelShutdown, cleanupDone, log)
+	return shutdown(cfg, httpServer, archiveService, workerPool, cancelShutdown, cleanupDone, log)
 }
 
-// shutdown performs the ordered graceful-shutdown sequence: flip
-// readiness, stop accepting jobs, stop workers from dequeuing, wait for
+// shutdown performs the ordered graceful-shutdown sequence: stop
+// accepting jobs, stop workers from dequeuing, wait for
 // in-flight jobs (bounded by cfg.Server.ShutdownTimeout), then close the
 // HTTP server. It always returns nil; timeouts are logged, not returned.
 func shutdown(
@@ -168,16 +165,12 @@ func shutdown(
 	httpServer *http.Server,
 	archiveService *service.ArchiveService,
 	workerPool *worker.Pool,
-	readiness *handler.Readiness,
 	cancelShutdown context.CancelFunc,
 	cleanupDone <-chan struct{},
 	log *slog.Logger,
 ) error {
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.Server.ShutdownTimeout)
 	defer cancel()
-
-	// Readiness must go false before anything else stops.
-	readiness.Set(false)
 
 	// Stop accepting new archive job requests.
 	archiveService.StopAccepting()

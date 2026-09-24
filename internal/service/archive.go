@@ -200,10 +200,15 @@ func (s *ArchiveService) ProcessJob(ctx context.Context, jobID string) {
 		return
 	}
 
-	s.logger.Info("archive job started", "job_id", j.ID, "root_folder_id", j.RootFolderID)
+	j.StartedAt = time.Now().UTC()
+	s.logger.Info("archive job started",
+		"job_id", j.ID,
+		"root_folder_id", j.RootFolderID,
+		"queue_wait", j.StartedAt.Sub(j.CreatedAt).String(),
+	)
 
 	j.Status = model.JobStatusProcessing
-	j.UpdatedAt = time.Now().UTC()
+	j.UpdatedAt = j.StartedAt
 	if err := s.jobs.Update(ctx, j); err != nil {
 		s.logger.Error("failed to mark job processing", "job_id", j.ID, "error", err)
 		return
@@ -334,21 +339,27 @@ func (s *ArchiveService) completeJob(ctx context.Context, j *model.Job) {
 		"job_id", j.ID,
 		"total_files", j.TotalFiles,
 		"total_bytes", j.TotalBytes,
+		"duration", now.Sub(j.StartedAt).String(),
+		"duration_ms", now.Sub(j.StartedAt).Milliseconds(),
+		"total_duration", now.Sub(j.CreatedAt).String(),
 	)
 }
 
 // failJob logs cause and marks j failed. Only safeMessage is stored on
 // the job (and therefore shown to clients); cause stays in the logs.
 func (s *ArchiveService) failJob(ctx context.Context, j *model.Job, safeMessage string, cause error) {
+	now := time.Now().UTC()
 	s.logger.Error("archive job failed",
 		"job_id", j.ID,
 		"root_folder_id", j.RootFolderID,
 		"error", cause,
+		"duration", now.Sub(j.StartedAt).String(),
+		"duration_ms", now.Sub(j.StartedAt).Milliseconds(),
 	)
 
 	j.Status = model.JobStatusFailed
 	j.ErrorMessage = safeMessage
-	j.UpdatedAt = time.Now().UTC()
+	j.UpdatedAt = now
 
 	if err := s.jobs.Update(ctx, j); err != nil {
 		s.logger.Error("failed to persist job failure", "job_id", j.ID, "error", err)
