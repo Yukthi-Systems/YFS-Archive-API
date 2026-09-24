@@ -29,15 +29,17 @@ import (
 
 // ArchiveHandler handles POST /internal/archives.
 type ArchiveHandler struct {
-	svc    *service.ArchiveService
-	expiry time.Duration
-	logger *slog.Logger
+	svc     *service.ArchiveService
+	expiry  time.Duration
+	baseURL string
+	logger  *slog.Logger
 }
 
 // NewArchiveHandler builds an ArchiveHandler. expiry is reported to
-// clients as expires_in.
-func NewArchiveHandler(svc *service.ArchiveService, expiry time.Duration, logger *slog.Logger) *ArchiveHandler {
-	return &ArchiveHandler{svc: svc, expiry: expiry, logger: logger}
+// clients as expires_in; baseURL is prefixed to the events URL (empty
+// yields a relative URL).
+func NewArchiveHandler(svc *service.ArchiveService, expiry time.Duration, baseURL string, logger *slog.Logger) *ArchiveHandler {
+	return &ArchiveHandler{svc: svc, expiry: expiry, baseURL: baseURL, logger: logger}
 }
 
 // createArchiveResponse is the 202 Accepted body of POST
@@ -75,7 +77,7 @@ func (h *ArchiveHandler) Create(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, h.logger, http.StatusAccepted, createArchiveResponse{
 		JobID:     j.ID,
 		Status:    string(j.Status),
-		EventsURL: fmt.Sprintf("/archives/%s/events", j.ID),
+		EventsURL: fmt.Sprintf("%s/archives/%s/events", h.baseURL, j.ID),
 		ExpiresIn: int64(h.expiry.Seconds()),
 	})
 }

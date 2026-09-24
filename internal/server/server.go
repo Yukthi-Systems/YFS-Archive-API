@@ -48,7 +48,7 @@ func New(
 ) *http.Server {
 	mux := http.NewServeMux()
 
-	archiveHandler := handler.NewArchiveHandler(svc, archiveExpiry, logger)
+	archiveHandler := handler.NewArchiveHandler(svc, archiveExpiry, cfg.PublicBaseURL, logger)
 	sseHandler := handler.NewSSEHandler(svc, 500*time.Millisecond, archiveExpiry, cfg.PublicBaseURL, shutdown, logger)
 	downloadHandler := handler.NewDownloadHandler(svc, logger)
 	healthHandler := handler.NewHealthHandler(readiness, logger)

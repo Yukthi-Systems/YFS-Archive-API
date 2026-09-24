@@ -161,7 +161,7 @@ syntax (`500ms`, `30s`, `5m`, `1h`).
 | `APP_ENV` | `development` | Free-form label included in the startup log. |
 | `SERVER_HOST` | `0.0.0.0` | Listen host. |
 | `SERVER_PORT` | `8080` | Listen port. |
-| `SERVER_PUBLIC_BASE_URL` | *(empty)* | Public origin prefixed to `download_url` (e.g. `https://archive.example.com`). Empty returns relative URLs. |
+| `SERVER_PUBLIC_BASE_URL` | *(empty)* | Public origin prefixed to `events_url` and `download_url` (e.g. `https://archive.example.com`). Empty returns relative URLs. |
 | `SERVER_READ_TIMEOUT` | `15s` | Applied as `ReadHeaderTimeout`. |
 | `SERVER_WRITE_TIMEOUT` | `15s` | Parsed but intentionally **not** applied. See [timeouts](#timeouts). |
 | `SERVER_IDLE_TIMEOUT` | `60s` | Keep-alive idle timeout. |

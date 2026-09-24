@@ -104,7 +104,7 @@ sets `ARCHIVE_TEMP_DIR`.
 |----------------------------|---------------|-------|
 | `DATABASE_URL`             | —             | **Required.** PostgreSQL connection string |
 | `SELF_API_TOKEN`           | —             | **Required.** Secret expected in the `X-API-Token` header of `POST /internal/archives` |
-| `SERVER_PUBLIC_BASE_URL`   | *(empty)*     | Public origin for absolute `download_url`s, e.g. `https://archive.example.com` |
+| `SERVER_PUBLIC_BASE_URL`   | *(empty)*     | Public origin for absolute `events_url`/`download_url`s, e.g. `https://archive.example.com` |
 | `SERVER_SHUTDOWN_TIMEOUT`  | `30s`         | Keep below the container stop timeout |
 | `ARCHIVE_MAX_SIZE_BYTES`   | `4294967296`  | 4 GiB hard cap |
 | `ARCHIVE_EXPIRY`           | `1h`          | How long an archive and its token stay valid |
