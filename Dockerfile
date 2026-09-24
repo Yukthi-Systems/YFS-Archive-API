@@ -16,7 +16,7 @@ RUN CGO_ENABLED=0 GOOS=linux \
     ./cmd/server
 
 # ---- Runtime stage --------------------------------------------------------
-FROM alpine:3.22
+FROM alpine:3.24
 
 ARG VERSION=dev
 
