@@ -1,0 +1,29 @@
+services:
+  archive-service:
+    image: rjyspl/yfs-archive-api:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: yfs-archive-api
+    restart: always
+
+    env_file:
+      - .env
+
+    ports:
+      - "127.0.0.1:8080:8080"
+
+    volumes:
+      - ./archives:/app/archives
+      - ./logs:/app/logs
+
+    # Must exceed SERVER_SHUTDOWN_TIMEOUT so in-flight archive jobs can
+    # finish before Docker sends SIGKILL.
+    stop_signal: SIGTERM
+    stop_grace_period: 45s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"

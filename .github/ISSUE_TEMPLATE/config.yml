@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Discord community
+    url: https://discord.com/invite/2BS7Z4FhJ
+    about: Ask questions and get help from the community.
+  - name: 📧 Email the maintainers
+    url: mailto:connect@yukthi.com
+    about: For general enquiries and partnerships.
+  - name: 🔒 Report a security vulnerability
+    url: https://github.com/Yukthi-Systems/YFS-Archive-API/security/advisories/new
+    about: Please report vulnerabilities privately, not as a public issue.
