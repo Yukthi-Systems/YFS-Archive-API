@@ -41,6 +41,7 @@ The minimum `.env`:
 
 ```dotenv
 DATABASE_URL=postgres://archive_readonly:change-me@db-host:5432/yfs
+SELF_API_TOKEN=change-me
 ```
 
 ### docker compose
@@ -83,8 +84,8 @@ curl http://localhost:8080/readyz    # {"status":"ready"}
 ## Configuration
 
 Pass variables with `--env-file`, `-e` or `environment:`. Only
-`DATABASE_URL` is required, because the image already sets
-`ARCHIVE_TEMP_DIR`.
+`DATABASE_URL` and `SELF_API_TOKEN` are required, because the image already
+sets `ARCHIVE_TEMP_DIR`.
 
 ### Image defaults
 
@@ -102,6 +103,7 @@ Pass variables with `--env-file`, `-e` or `environment:`. Only
 | Variable                   | Default       | Notes |
 |----------------------------|---------------|-------|
 | `DATABASE_URL`             | —             | **Required.** PostgreSQL connection string |
+| `SELF_API_TOKEN`           | —             | **Required.** Secret expected in the `X-API-Token` header of `POST /internal/archives` |
 | `SERVER_PUBLIC_BASE_URL`   | *(empty)*     | Public origin for absolute `download_url`s, e.g. `https://archive.example.com` |
 | `SERVER_SHUTDOWN_TIMEOUT`  | `30s`         | Keep below the container stop timeout |
 | `ARCHIVE_MAX_SIZE_BYTES`   | `4294967296`  | 4 GiB hard cap |
@@ -142,6 +144,7 @@ Logs are JSON on stdout by default, so `docker logs` works out of the box.
 ```bash
 curl -X POST http://localhost:8080/internal/archives \
   -H 'Content-Type: application/json' \
+  -H "X-API-Token: $SELF_API_TOKEN" \
   -d '{"root_folder_id":"<uuid>","archive_name":"Documents.zip","export_type":"zip"}'
 ```
 

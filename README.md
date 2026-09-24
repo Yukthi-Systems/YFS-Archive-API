@@ -102,7 +102,7 @@ and nothing outside `internal/config` reads environment variables.
 ### Run with Docker
 
 ```bash
-cp .env.example .env         # set DATABASE_URL at minimum
+cp .env.example .env         # set DATABASE_URL and SELF_API_TOKEN at minimum
 docker compose up -d
 curl http://localhost:8080/healthz    # {"status":"ok"}
 ```
@@ -125,7 +125,7 @@ See [DOCKERHUB.md](DOCKERHUB.md) for everything image-specific.
 ```bash
 git clone https://github.com/Yukthi-Systems/YFS-Archive-API.git
 cd YFS-Archive-API
-cp .env.example .env         # set DATABASE_URL at minimum
+cp .env.example .env         # set DATABASE_URL and SELF_API_TOKEN at minimum
 go run ./cmd/server
 ```
 
@@ -135,6 +135,7 @@ go run ./cmd/server
 # 1. Queue a job
 curl -s -X POST http://localhost:8080/internal/archives \
   -H 'Content-Type: application/json' \
+  -H "X-API-Token: $SELF_API_TOKEN" \
   -d '{"root_folder_id":"<folder-uuid>","archive_name":"Documents.zip","export_type":"zip"}'
 
 # 2. Follow progress (prints the download token when done)
@@ -155,6 +156,7 @@ syntax (`500ms`, `30s`, `5m`, `1h`).
 | **Required** | | |
 | `DATABASE_URL` | — | PostgreSQL connection string. Use a `SELECT`-only role. |
 | `ARCHIVE_TEMP_DIR` | — | Directory where archives are written. Created if missing. |
+| `SELF_API_TOKEN` | — | Shared secret required in the `X-API-Token` header of `POST /internal/archives`. |
 | **Server** | | |
 | `APP_ENV` | `development` | Free-form label included in the startup log. |
 | `SERVER_HOST` | `0.0.0.0` | Listen host. |
@@ -229,6 +231,9 @@ details are logged, never returned.
 
 ### `POST /internal/archives`
 
+Requires the header `X-API-Token: {SELF_API_TOKEN}`. A missing or wrong
+token gets `401 Unauthorized`.
+
 ```json
 {
   "root_folder_id": "08dcf8b0-3789-4ae3-97c8-014fc4f42dd8",
@@ -252,6 +257,7 @@ details are logged, never returned.
 | Status | Meaning |
 |---|---|
 | `400` | Malformed JSON or failed validation. |
+| `401` | Missing or invalid `X-API-Token`. |
 | `404` | Root folder not found. |
 | `503` | Queue full, or service shutting down. Retry with backoff. |
 

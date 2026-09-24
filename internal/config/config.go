@@ -56,6 +56,9 @@ type ServerConfig struct {
 	// PublicBaseURL is the externally reachable origin (scheme://host[:port])
 	// used to build absolute download URLs. Empty means relative URLs.
 	PublicBaseURL string
+	// SelfAPIToken is the shared secret callers must send in the
+	// X-API-Token header to use the internal endpoints.
+	SelfAPIToken string
 }
 
 // Addr returns the host:port listen address.
@@ -128,6 +131,7 @@ func Load() (*Config, error) {
 			Host:          getString("SERVER_HOST", "0.0.0.0"),
 			Port:          0,
 			PublicBaseURL: strings.TrimRight(getString("SERVER_PUBLIC_BASE_URL", ""), "/"),
+			SelfAPIToken:  getString("SELF_API_TOKEN", ""),
 		},
 		Database: DatabaseConfig{
 			URL: getString("DATABASE_URL", ""),
@@ -226,6 +230,9 @@ func Load() (*Config, error) {
 func (c *Config) validate() error {
 	if c.Database.URL == "" {
 		return fmt.Errorf("DATABASE_URL is required")
+	}
+	if c.Server.SelfAPIToken == "" {
+		return fmt.Errorf("SELF_API_TOKEN is required")
 	}
 	if c.Archive.TempDir == "" {
 		return fmt.Errorf("ARCHIVE_TEMP_DIR is required")

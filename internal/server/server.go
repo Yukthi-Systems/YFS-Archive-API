@@ -18,6 +18,8 @@ package server
 
 import (
 	"context"
+	"crypto/subtle"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"time"
@@ -51,7 +53,7 @@ func New(
 	downloadHandler := handler.NewDownloadHandler(svc, logger)
 	healthHandler := handler.NewHealthHandler(readiness, logger)
 
-	mux.HandleFunc("POST /internal/archives", archiveHandler.Create)
+	mux.Handle("POST /internal/archives", requireAPIToken(cfg.SelfAPIToken, logger)(http.HandlerFunc(archiveHandler.Create)))
 	mux.HandleFunc("GET /archives/{job_id}/events", sseHandler.Events)
 	mux.HandleFunc("GET /archives/{job_id}/download", downloadHandler.Download)
 	mux.HandleFunc("GET /healthz", healthHandler.Healthz)
@@ -96,6 +98,30 @@ func cors(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+// apiTokenHeader carries the shared secret for internal endpoints.
+const apiTokenHeader = "X-API-Token"
+
+// requireAPIToken returns middleware that rejects requests whose
+// X-API-Token header does not match token with 401 Unauthorized. The
+// comparison is constant-time so the secret cannot be recovered by timing.
+func requireAPIToken(token string, logger *slog.Logger) func(http.Handler) http.Handler {
+	want := []byte(token)
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			got := []byte(r.Header.Get(apiTokenHeader))
+			if len(want) == 0 || subtle.ConstantTimeCompare(got, want) != 1 {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusUnauthorized)
+				if err := json.NewEncoder(w).Encode(map[string]string{"error": "unauthorized"}); err != nil {
+					logger.Error("failed to write json response", "error", err)
+				}
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 }
 
 // requestLogger returns middleware that logs method, path, status and
