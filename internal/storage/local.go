@@ -69,7 +69,7 @@ func (s *LocalArchiveStorage) Create(jobID string) (io.WriteCloser, error) {
 }
 
 // Open implements ArchiveStorage.Open.
-func (s *LocalArchiveStorage) Open(jobID string) (io.ReadCloser, error) {
+func (s *LocalArchiveStorage) Open(jobID string) (io.ReadSeekCloser, error) {
 	f, err := os.Open(s.finalPath(jobID))
 	if err != nil {
 		return nil, fmt.Errorf("open archive: %w", err)

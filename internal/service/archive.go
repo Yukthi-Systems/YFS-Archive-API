@@ -185,7 +185,7 @@ func (s *ArchiveService) ValidateDownloadToken(ctx context.Context, jobID, tok s
 }
 
 // OpenArchive opens the finalized archive file for jobID for streaming.
-func (s *ArchiveService) OpenArchive(jobID string) (io.ReadCloser, error) {
+func (s *ArchiveService) OpenArchive(jobID string) (io.ReadSeekCloser, error) {
 	return s.files.Open(jobID)
 }
 
@@ -229,7 +229,8 @@ func (s *ArchiveService) ProcessJob(ctx context.Context, jobID string) {
 	}
 
 	if manifest.TotalBytes > s.cfg.MaxSizeBytes {
-		s.failJob(ctx, j, "archive exceeds maximum allowed size", fmt.Errorf("total bytes %d exceeds limit %d", manifest.TotalBytes, s.cfg.MaxSizeBytes))
+		s.failJob(ctx, j, "archive exceeds maximum allowed size",
+			fmt.Errorf("total bytes %d exceeds limit %d", manifest.TotalBytes, s.cfg.MaxSizeBytes))
 		return
 	}
 
@@ -253,6 +254,17 @@ func (s *ArchiveService) buildManifest(ctx context.Context, j *model.Job) (*mode
 	files, err := s.repo.GetFilesForFolderTree(ctx, j.RootFolderID)
 	if err != nil {
 		return nil, fmt.Errorf("get files for folder tree: %w", err)
+	}
+
+	// The repository roots every path at the folder's own name; the
+	// extracted archive should instead be rooted at the name the user
+	// chose (e.g. "Documents.zip" -> "Documents/...").
+	root := archiveRootDir(j.ArchiveName)
+	for i := range folders {
+		folders[i].ArchivePath = rebaseArchivePath(folders[i].ArchivePath, root)
+	}
+	for i := range files {
+		files[i].ArchivePath = rebaseArchivePath(files[i].ArchivePath, root)
 	}
 
 	var totalBytes int64
@@ -393,6 +405,36 @@ func validateArchiveName(raw string) (string, error) {
 		return "", fmt.Errorf("%w: archive_name is invalid", ErrValidation)
 	}
 	return name, nil
+}
+
+// archiveRootDir derives the archive's top-level directory name from the
+// user-supplied archive name by stripping a trailing ".zip" or ".tar"
+// (case-insensitive). It returns "" if nothing usable remains.
+func archiveRootDir(archiveName string) string {
+	name := strings.TrimSpace(archiveName)
+	lower := strings.ToLower(name)
+	for _, ext := range []string{".zip", ".tar"} {
+		if strings.HasSuffix(lower, ext) {
+			name = strings.TrimSpace(name[:len(name)-len(ext)])
+			break
+		}
+	}
+	if name == "." || name == ".." {
+		return ""
+	}
+	return name
+}
+
+// rebaseArchivePath replaces the first segment of p (the root folder's
+// name) with root. An empty root leaves p unchanged.
+func rebaseArchivePath(p, root string) string {
+	if root == "" {
+		return p
+	}
+	if i := strings.IndexByte(p, '/'); i >= 0 {
+		return root + p[i:]
+	}
+	return root
 }
 
 // validateExportType defaults an empty export_type to ZIP (for backward

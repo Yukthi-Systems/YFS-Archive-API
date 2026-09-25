@@ -32,8 +32,9 @@ type ArchiveStorage interface {
 	Create(jobID string) (io.WriteCloser, error)
 
 	// Open opens the finalized archive for jobID (the "<job-id>.zip" file)
-	// for reading, e.g. for streaming a download.
-	Open(jobID string) (io.ReadCloser, error)
+	// for reading, e.g. for streaming a download. It is seekable so the
+	// download handler can serve byte ranges.
+	Open(jobID string) (io.ReadSeekCloser, error)
 
 	// Delete removes both the finalized archive and any leftover temp file
 	// for jobID. It must not error if neither exists.

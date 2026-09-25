@@ -39,14 +39,14 @@ type ArchiveRepository interface {
 	FolderExists(ctx context.Context, folderID string) (bool, error)
 
 	// GetFolderTree returns every undeleted folder in the subtree rooted at
-	// rootFolderID (root folder itself is not included; its children are
-	// returned with paths relative to the root).
+	// rootFolderID, including the root folder itself. Paths start with the
+	// root folder's name (e.g. "Docs", "Docs/docs1").
 	GetFolderTree(ctx context.Context, rootFolderID string) ([]model.ArchiveFolder, error)
 
 	// GetFilesForFolderTree returns every undeleted file within the subtree
 	// rooted at rootFolderID (including files directly inside the root),
-	// each resolved to its latest file_version, with archive paths relative
-	// to the root.
+	// each resolved to its latest file_version, with archive paths starting
+	// with the root folder's name (e.g. "Docs/docs1/a.txt").
 	GetFilesForFolderTree(ctx context.Context, rootFolderID string) ([]model.ArchiveFile, error)
 }
 
@@ -77,9 +77,8 @@ func (r *pgArchiveRepository) FolderExists(ctx context.Context, folderID string)
 }
 
 // folderTreeQuery walks the folder subtree rooted at $1. The root folder's
-// own name is deliberately excluded from archive_path: the archive
-// represents the *contents* of the root folder, so descendants' paths are
-// relative to it (root itself never appears as a path segment).
+// own name is the first archive_path segment, so the archive extracts to a
+// single top-level directory named after the root (e.g. "Docs/...").
 const folderTreeQuery = `
 WITH RECURSIVE folder_tree AS (
     SELECT
@@ -87,7 +86,7 @@ WITH RECURSIVE folder_tree AS (
         f.parent_folder_id,
         f.user_id,
         f.folder_name,
-        ''::text AS archive_path
+        f.folder_name::text AS archive_path
     FROM folders f
     WHERE f.folder_id = $1::uuid
       AND f.deleted_at IS NULL
@@ -99,10 +98,7 @@ WITH RECURSIVE folder_tree AS (
         child.parent_folder_id,
         child.user_id,
         child.folder_name,
-        CASE
-            WHEN parent.archive_path = '' THEN child.folder_name
-            ELSE parent.archive_path || '/' || child.folder_name
-        END
+        parent.archive_path || '/' || child.folder_name
     FROM folders child
     JOIN folder_tree parent
         ON child.parent_folder_id = parent.folder_id
@@ -110,7 +106,6 @@ WITH RECURSIVE folder_tree AS (
 )
 SELECT folder_id, parent_folder_id, folder_name, archive_path
 FROM folder_tree
-WHERE archive_path <> ''
 ORDER BY archive_path`
 
 // GetFolderTree implements ArchiveRepository.GetFolderTree.
@@ -153,7 +148,7 @@ WITH RECURSIVE folder_tree AS (
     SELECT
         f.folder_id,
         f.user_id,
-        ''::text AS archive_path
+        f.folder_name::text AS archive_path
     FROM folders f
     WHERE f.folder_id = $1::uuid
       AND f.deleted_at IS NULL
@@ -163,10 +158,7 @@ WITH RECURSIVE folder_tree AS (
     SELECT
         child.folder_id,
         child.user_id,
-        CASE
-            WHEN parent.archive_path = '' THEN child.folder_name
-            ELSE parent.archive_path || '/' || child.folder_name
-        END
+        parent.archive_path || '/' || child.folder_name
     FROM folders child
     JOIN folder_tree parent
         ON child.parent_folder_id = parent.folder_id
@@ -176,10 +168,7 @@ resolved AS (
     SELECT
         f.file_id,
         f.file_name,
-        CASE
-            WHEN ft.archive_path = '' THEN f.file_name
-            ELSE ft.archive_path || '/' || f.file_name
-        END AS archive_path,
+        ft.archive_path || '/' || f.file_name AS archive_path,
         fv.file_version,
         fv.hosted_at,
         fv.file_location,

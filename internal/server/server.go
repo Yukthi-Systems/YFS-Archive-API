@@ -77,7 +77,8 @@ func cors(next http.Handler) http.Handler {
 		} else {
 			h.Set("Access-Control-Allow-Origin", "*")
 		}
-		h.Set("Access-Control-Expose-Headers", "Content-Disposition, Content-Length, Content-Type")
+		h.Set("Access-Control-Expose-Headers",
+			"Accept-Ranges, Content-Disposition, Content-Length, Content-Range, Content-Type, Last-Modified")
 
 		if r.Method == http.MethodOptions {
 			h.Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")

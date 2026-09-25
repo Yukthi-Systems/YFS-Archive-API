@@ -18,11 +18,11 @@ package handler
 import (
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/Yukthi-Systems/YFS-Archive-API/internal/job"
 	"github.com/Yukthi-Systems/YFS-Archive-API/internal/model"
@@ -43,7 +43,10 @@ func NewDownloadHandler(svc *service.ArchiveService, logger *slog.Logger) *Downl
 
 // Download handles GET /archives/{job_id}/download. It responds 401 for
 // a missing, invalid or expired token, 404 for an unknown job, 409 if
-// the job has not completed, and otherwise streams the archive.
+// the job has not completed, and otherwise serves the archive via
+// http.ServeContent, which sets Content-Length, Last-Modified and
+// Accept-Ranges and honors Range / conditional requests (resumable
+// downloads).
 func (h *DownloadHandler) Download(w http.ResponseWriter, r *http.Request) {
 	jobID := r.PathValue("job_id")
 	tok := r.URL.Query().Get("token")
@@ -87,12 +90,15 @@ func (h *DownloadHandler) Download(w http.ResponseWriter, r *http.Request) {
 	}
 	defer f.Close()
 
+	var modTime time.Time
+	if j.CompletedAt != nil {
+		modTime = *j.CompletedAt
+	}
+
 	w.Header().Set("Content-Type", j.ExportType.ContentType())
 	w.Header().Set("Content-Disposition", contentDisposition(j.ArchiveName))
 
-	if _, err := io.Copy(w, f); err != nil {
-		h.logger.Error("failed to stream archive", "job_id", j.ID, "error", err)
-	}
+	http.ServeContent(w, r, j.ArchiveName, modTime, f)
 }
 
 // contentDisposition builds a Content-Disposition header value that carries
